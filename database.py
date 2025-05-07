@@ -1,17 +1,13 @@
 import sqlite3
 
+import sqlite3
+
 DB_NAME = "votes.db"
 
 def connect():
-    """
-    Establish a connection to the SQLite database
-    """
     return sqlite3.connect(DB_NAME)
 
 def setup_db():
-    """
-    Create the candidates and votes tables if they do not exist
-    """
     conn = connect()
     cur = conn.cursor()
 
@@ -26,7 +22,14 @@ def setup_db():
     CREATE TABLE IF NOT EXISTS votes (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         candidate_id INTEGER NOT NULL,
+        voter_id TEXT UNIQUE NOT NULL,
         FOREIGN KEY(candidate_id) REFERENCES candidates(id)
+    )
+    """)
+
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS voters (
+        id TEXT PRIMARY KEY
     )
     """)
 
@@ -35,7 +38,7 @@ def setup_db():
 
 def add_candidate(name):
     """
-    Insert a new candidate with the given name into the database
+    function allows user to add candidates to vote menu
     """
     conn = connect()
     cur = conn.cursor()
@@ -45,7 +48,7 @@ def add_candidate(name):
 
 def get_candidates():
     """
-    Retrieve all candidates from the database.
+    will retrieve data from database
     """
     conn = connect()
     cur = conn.cursor()
@@ -54,21 +57,43 @@ def get_candidates():
     conn.close()
     return candidates
 
-def record_vote(candidate_id):
+def has_voted(voter_id):
     """
-    Record a vote for the specified candidate using their unique candidate ID
+    this checks to see if the ID has already been used or not 
     """
     conn = connect()
     cur = conn.cursor()
-    cur.execute("INSERT INTO votes (candidate_id) VALUES (?)", (candidate_id,))
+    cur.execute("SELECT 1 FROM voters WHERE id = ?", (voter_id,))
+    result = cur.fetchone()
+    conn.close()
+    return result is not None
+
+def register_voter(voter_id):
+    """
+    takes and saves voter's ID 
+    """
+    conn = connect()
+    cur = conn.cursor()
+    cur.execute("INSERT INTO voters (id) VALUES (?)", (voter_id,))
+    conn.commit()
+    conn.close()
+
+def record_vote(candidate_id, voter_id):
+    """
+    saves voter's vote into a database
+    """
+    conn = connect()
+    cur = conn.cursor()
+    cur.execute("INSERT INTO votes (candidate_id, voter_id) VALUES (?, ?)", (candidate_id, voter_id))
     conn.commit()
     conn.close()
 
 def count_votes():
     """
-    Count the number of votes each candidate has received and return the results
+    Counts the votes
     """
     conn = connect()
+
     cur = conn.cursor()
     cur.execute("""
         SELECT c.name, COUNT(v.candidate_id) as total_votes
